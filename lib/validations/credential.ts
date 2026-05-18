@@ -4,7 +4,7 @@ const environmentSchema = z.enum(["production", "staging", "development", "share
 
 const credentialFieldSchema = z.object({
   key: z.string().min(1, "Key is required").max(200, "Key must be 200 characters or less"),
-  value: z.string().max(10000, "Value must be 10000 characters or less"),
+  value: z.string().max(10000, "Value must be 10000 characters or less").default(""),
 });
 
 export const createCredentialSchema = z.object({

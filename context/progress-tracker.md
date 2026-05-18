@@ -7,12 +7,20 @@ change.
 
 - Feature 21 (Invite Member Logic) complete: share-link-only invite flow with accept invitation page
 - Credential encryption hardened: all CredentialField data (key + value) now encrypted at rest, `secret` column removed
+- Credential creation bug fixed
 
 ## Current Goal
 
 - Define and implement the next feature scope
 
 ## Completed
+
+- **[BUGFIX]** Fixed credential creation failing with `P2011 Null constraint violation`:
+  - Root cause: The earlier migration renamed `key` → `key_deprecated` and `secret` → `secret_deprecated` instead of dropping them. These columns remained NOT NULL in the database, so any INSERT without values for them failed.
+  - Fix: Created migration `20260518072459_drop_deprecated_credential_columns` to drop `key_deprecated` and `secret_deprecated` columns
+  - Also refactored `createCredential` and `updateCredentialById` to use explicit `$transaction` with individual `create()` calls instead of nested creates / `createMany` (more reliable with PrismaPg adapter)
+  - Added `.default("")` to `value` field in validation schema for safety
+  - `npm run build` passes
 
 - **[ARCHITECTURE]** Removed direct client fetch calls from members UI component:
   - Added `listMembersByDivisionAction` and `listMyDivisionsAction` in `app/actions/members.ts` for server-side data loading access

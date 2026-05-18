@@ -123,25 +123,39 @@ export async function createCredential(
     );
   }
 
-  const credential = await prisma.credential.create({
-    data: {
-      slug,
-      name: input.name,
-      environment: input.environment,
-      projectId: input.projectId,
-      fields: {
-        create: input.fields.map((field) => ({
+  const credential = await prisma.$transaction(async (tx) => {
+    const cred = await tx.credential.create({
+      data: {
+        slug,
+        name: input.name,
+        environment: input.environment,
+        projectId: input.projectId,
+      },
+    });
+
+    for (const field of input.fields) {
+      await tx.credentialField.create({
+        data: {
           encryptedKey: encryptToString(field.key),
-          encryptedValue: encryptToString(field.value),
-        })),
+          encryptedValue: encryptToString(field.value ?? ""),
+          credentialId: cred.id,
+        },
+      });
+    }
+
+    return tx.credential.findUnique({
+      where: { id: cred.id },
+      include: {
+        fields: {
+          select: { id: true, credentialId: true },
+        },
       },
-    },
-    include: {
-      fields: {
-        select: { id: true, credentialId: true },
-      },
-    },
+    });
   });
+
+  if (!credential) {
+    throw new Error("Failed to create credential");
+  }
 
   await Promise.all([
     writeAuditLog({
@@ -187,13 +201,15 @@ export async function updateCredentialById(
   const updated = await prisma.$transaction(async (tx) => {
     if (input.fields !== undefined) {
       await tx.credentialField.deleteMany({ where: { credentialId: id } });
-      await tx.credentialField.createMany({
-        data: input.fields.map((field) => ({
-          encryptedKey: encryptToString(field.key),
-          encryptedValue: encryptToString(field.value),
-          credentialId: id,
-        })),
-      });
+      for (const field of input.fields) {
+        await tx.credentialField.create({
+          data: {
+            encryptedKey: encryptToString(field.key),
+            encryptedValue: encryptToString(field.value ?? ""),
+            credentialId: id,
+          },
+        });
+      }
     }
 
     return tx.credential.update({

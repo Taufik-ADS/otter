@@ -30,7 +30,7 @@ export default async function NewProjectCredentialPage({ params }: Props) {
   );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 w-full mx-auto space-y-6">
       <div className="space-y-3">
         <Button asChild variant="ghost" className="rounded-lg px-2 text-xs">
           <Link href={`/projects/${slug}`}>
